@@ -1,0 +1,319 @@
+<!DOCTYPE html>  
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Apples</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: radial-gradient(circle, #ffcc00, #ff6600);
+            overflow: hidden;
+            transition: background 0.5s;
+            flex-direction: column;
+        }
+        canvas {
+            background: url('https://www.transparenttextures.com/patterns/pixel-weave.png'), #ffefd5;
+            border: 5px solid #d2691e;
+            border-radius: 15px;
+            box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+        .menu, .game-over, .options, .reset-confirmation {
+            position: absolute;
+            background: rgba(255, 255, 255, 1); /* Solid background */
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+        }
+        .menu {
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .game-over {
+            display: none;
+        }
+        .options {
+            display: none;
+        }
+        .reset-confirmation {
+            display: none;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #ff6600;
+            color: white;
+            transition: background 0.3s, transform 0.2s ease;
+        }
+        button:hover {
+            background: #d2691e;
+            transform: scale(1.1);
+        }
+        .dark-mode {
+            background: #222 !important;
+            color: white !important;
+        }
+        .dark-mode canvas {
+            background: black !important;
+        }
+        .dark-mode button {
+            background: #444 !important;
+            color: white !important;
+        }
+        .dark-mode h1, .dark-mode h2, .dark-mode button {
+            color: #444;
+        }
+        h1 {
+            color: #ff6600;
+        }
+        h2 {
+            color: #ff6600;
+        }
+        #scoreDisplay {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 30px; /* Increased font size */
+            color: #444; /* Normal mode color */
+        }
+        .dark-mode #scoreDisplay {
+            color: #ff6600; /* Orange color for dark mode */
+        }
+        #scoreDisplay {
+            display: none;
+        }
+        .game-active #scoreDisplay {
+            display: block;
+        }
+
+        /* Reset Confirmation Text */
+        .reset-confirmation h2, .reset-confirmation p {
+            color: #ff6600; /* Normal mode */
+        }
+        .dark-mode .reset-confirmation h2, .dark-mode .reset-confirmation p {
+            color: #444; /* Dark mode */
+        }
+
+        /* Game Over Text Color */
+        .game-over h2 {
+            color: black; /* Normal mode */
+        }
+        .dark-mode .game-over h2 {
+            color: #ff6600; /* Orange color for dark mode */
+        }
+
+        .game-over p {
+            color: black; /* Normal mode */
+        }
+        .dark-mode .game-over p {
+            color: #ff6600; /* Orange color for dark mode */
+        }
+    </style>
+</head>
+<body>
+    <div class="menu" id="mainMenu">
+        <h1>Catch the Apples</h1>
+        <button onclick="startGame()">Start Game</button>
+        <button onclick="openOptions()">Options</button>
+    </div>
+
+    <div class="options" id="optionsMenu">
+        <h2>Options</h2>
+        <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+        <button onclick="showResetConfirmation()">Reset High Score</button>
+        <button onclick="backToMenu()">Back</button>
+    </div>
+
+    <div class="reset-confirmation" id="resetConfirmation">
+        <h2>Are you sure you want to reset your high score?</h2>
+        <p>Current High Score: <span id="currentHighScore"></span></p>
+        <button onclick="resetHighScore()">Yes</button>
+        <button onclick="closeResetConfirmation()">Nevermind</button>
+    </div>
+
+    <div class="game-over" id="gameOverScreen">
+        <h2>Game Over</h2>
+        <p id="finalScore"></p>
+        <p id="highScore"></p>
+        <button onclick="backToMenu()">Main Menu</button>
+    </div>
+
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <div id="scoreDisplay">Score: 0</div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        let basketWidth = 100;
+        let basketHeight = 20;
+        let basketX = (canvas.width - basketWidth) / 2;
+        let basketSpeed = 6;
+        let apples = [];
+        let score = 0;
+        let highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0; // Load high score from local storage
+        let gameOver = false;
+        const appleSpeed = 5;
+        let darkMode = false;
+        let appleInterval;
+
+        const basket = {
+            width: basketWidth,
+            height: basketHeight,
+            x: basketX,
+            speed: basketSpeed
+        };
+
+        function Apple(x, y) {
+            this.x = x;
+            this.y = y;
+            this.size = 20;
+            this.speed = appleSpeed;
+        }
+
+        function generateApple() {
+            const x = Math.random() * (canvas.width - 20);
+            apples.push(new Apple(x, 0));
+        }
+
+        function updateGame() {
+            if (gameOver) {
+                return;
+            }
+
+            if (rightPressed && basket.x < canvas.width - basket.width) {
+                basket.x += basket.speed;
+            } else if (leftPressed && basket.x > 0) {
+                basket.x -= basket.speed;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#d2691e";
+            ctx.fillRect(basket.x, canvas.height - basket.height, basket.width, basket.height);
+
+            ctx.fillStyle = darkMode ? "black" : "white"; // Apple inside color
+            apples.forEach((apple, index) => {
+                apple.y += apple.speed;
+                ctx.beginPath();
+                ctx.arc(apple.x, apple.y, apple.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = "#d2691e"; // Outline color matching the basket
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Enhanced collision detection
+                if (apple.y + apple.size > canvas.height - basket.height &&
+                    apple.x + apple.size > basket.x &&
+                    apple.x - apple.size < basket.x + basket.width) {
+                    score++;
+                    apples.splice(index, 1);
+                }
+
+                if (apple.y > canvas.height) {
+                    endGame();
+                }
+            });
+
+            document.getElementById("scoreDisplay").textContent = "Score: " + score;
+
+            if (!gameOver) {
+                requestAnimationFrame(updateGame);
+            }
+        }
+
+        let rightPressed = false;
+        let leftPressed = false;
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key == "Right" || e.key == "ArrowRight") {
+                rightPressed = true;
+            } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                leftPressed = true;
+            }
+        });
+
+        document.addEventListener("keyup", (e) => {
+            if (e.key == "Right" || e.key == "ArrowRight") {
+                rightPressed = false;
+            } else if (e.key == "Left" || e.key == "ArrowLeft") {
+                leftPressed = false;
+            }
+        });
+
+        function startGame() {
+            document.getElementById("mainMenu").style.display = "none";
+            document.getElementById("optionsMenu").style.display = "none";
+            document.getElementById("gameOverScreen").style.display = "none";
+            canvas.style.display = "block";
+            document.body.classList.add("game-active");
+            gameOver = false;
+            score = 0;
+            apples = [];
+            clearInterval(appleInterval);
+            appleInterval = setInterval(generateApple, 1000);
+            updateGame();
+        }
+
+        function openOptions() {
+            document.getElementById("mainMenu").style.display = "none";
+            document.getElementById("optionsMenu").style.display = "block";
+        }
+
+        function toggleDarkMode() {
+            darkMode = !darkMode;
+            document.body.classList.toggle("dark-mode", darkMode);
+        }
+
+        function showResetConfirmation() {
+            document.getElementById("currentHighScore").textContent = highScore;
+            document.getElementById("resetConfirmation").style.display = "block";
+        }
+
+        function closeResetConfirmation() {
+            document.getElementById("resetConfirmation").style.display = "none";
+        }
+
+        function resetHighScore() {
+            highScore = 0;
+            localStorage.setItem('highScore', highScore);
+            document.getElementById("highScore").textContent = "High Score: " + highScore;
+            closeResetConfirmation();
+        }
+
+        function endGame() {
+            gameOver = true;
+            canvas.style.display = "none";
+            document.body.classList.remove("game-active");
+            document.getElementById("gameOverScreen").style.display = "block";
+            document.getElementById("finalScore").textContent = "Your Score: " + score;
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('highScore', highScore);
+                document.getElementById("highScore").textContent = "New High Score: " + highScore;
+            } else {
+                document.getElementById("highScore").textContent = "High Score: " + highScore;
+            }
+        }
+
+        function backToMenu() {
+            document.getElementById("gameOverScreen").style.display = "none";
+            document.getElementById("optionsMenu").style.display = "none";
+            document.getElementById("mainMenu").style.display = "block";
+            document.getElementById("resetConfirmation").style.display = "none";
+        }
+    </script>
+</body>
+</html>
