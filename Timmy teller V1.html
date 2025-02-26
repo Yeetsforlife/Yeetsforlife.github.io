@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NAME TELLER</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            overflow: hidden;
+            background-color: #ffeb3b; /* Solid yellow background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column; /* Stack the content vertically */
+        }
+
+        .title {
+            font-size: 48px;
+            font-weight: bold;
+            color: #e3a700;
+            margin-top: 20px;
+        }
+
+        .character {
+            position: relative;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .container {
+            text-align: center;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            margin-top: 20px;
+            width: 300px;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 2px solid #ddd;
+            margin-bottom: 20px;
+            width: 80%;
+        }
+
+        input:focus {
+            border-color: #4caf50;
+            outline: none;
+        }
+
+        p {
+            font-size: 18px;
+            color: #333;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .response {
+            font-size: 20px;
+            color: #4caf50; /* Visible text color */
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .fade-in {
+            opacity: 1;
+        }
+
+        /* Character and mouth animation */
+        .character {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            background-color: #fff;
+            border-radius: 50%;
+            border: 2px solid #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .mouth {
+            width: 60px;
+            height: 10px;
+            background-color: #333;
+            border-radius: 5px;
+            margin-top: 5px;
+            transition: height 0.2s ease-out;
+        }
+
+        .open-mouth {
+            height: 25px;
+        }
+
+        .character .eyes {
+            display: flex;
+            justify-content: space-between;
+            width: 60px;
+            margin-top: 10px;
+        }
+
+        .eye {
+            width: 12px;
+            height: 12px;
+            background-color: #333;
+            border-radius: 50%;
+        }
+
+        .glasses {
+            position: absolute;
+            width: 60px;  /* Increased width for larger glasses */
+            height: 25px; /* Increased height for larger glasses */
+            border: 3px solid black;
+            border-radius: 12px; /* Adjusted for the larger size */
+            top: -20px; /* Start position above the character's head */
+            display: flex;
+            justify-content: space-between;
+            opacity: 0; /* Initially hidden */
+            transition: opacity 1s ease-in-out;
+        }
+
+        .glasses .lens {
+            width: 25px;  /* Increased lens size */
+            height: 25px; /* Increased lens size */
+            background-color: black; /* Fully black lenses */
+            border-radius: 50%; /* Keep them round */
+        }
+
+        /* List of names displayed when typing "name" */
+        .name-list, .command-list {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333;
+            display: none; /* Hidden by default */
+        }
+
+        .cool-font {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 22px;
+            font-weight: bold;
+            color: #ff4500;
+        }
+
+        /* Style for Giga Chad */
+        .giga-chad {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 22px;
+            font-weight: bold;
+            color: #ff4500;
+        }
+
+        .character.red-face {
+            background-color: red; /* Changes face color to red */
+        }
+    </style>
+</head>
+<body>
+    <div class="title">NAME TELLER</div>
+    <!-- Character: Round head with eyes, mouth, and optional glasses -->
+    <div class="character">
+        <div class="eyes">
+            <div class="eye"></div>
+            <div class="eye"></div>
+        </div>
+        <div class="mouth"></div>
+        <div class="glasses">
+            <div class="lens"></div>
+            <div class="lens"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <input type="text" id="userInput" placeholder="Ask me something..." onkeyup="showBestMatch(event)">
+        <div id="response" class="response"></div>
+        <div class="name-list"></div>
+        <div class="command-list"></div>
+    </div>
+
+    <script>
+        let typingInProgress = false; // Prevents multiple typing events at the same time
+        let glassesOn = false; // Track whether the glasses are on or off
+
+        function showBestMatch(event) {
+            if (event.key === "Enter" && !typingInProgress) {
+                typingInProgress = true; // Start typing process
+                const inputText = document.getElementById("userInput").value.toLowerCase();
+                let bestMatch = "";
+
+                // Always reset face color to normal before any input processing
+                resetFaceColor();
+                removeGlasses(); // Remove glasses in case they're on
+
+                // Hide the name list and command list if any other input is given
+                hideNameList();
+                hideCommandList();
+
+                // Clear the input field immediately after processing a command
+                document.getElementById("userInput").value = "";
+
+                // Flexible matching for greetings
+                const greetings = ["hi", "hello", "hey", "how are you"];
+                const similarGreetings = ["hii", "helo", "heyy"];
+                const greetingPattern = new RegExp(`\\b(${greetings.join("|")})\\b`, "i");
+                const similarPattern = new RegExp(`\\b(${similarGreetings.join("|")})\\b`, "i");
+
+                // Custom responses based on the name typed
+                if (inputText === "owen") {
+                    bestMatch = "Owen = not sigma";
+                } else if (inputText === "louie") {
+                    bestMatch = "Louie = unskilled and fat";
+                } else if (inputText === "rueben") {
+                    bestMatch = "Rueben = fatty";
+                } else if (inputText === "timmy") {
+                    bestMatch = "Timmy = the name teller!";
+                } else if (inputText === "li'on") {
+                    bestMatch = "Li'on = Giga Chad👑";  // Simplified response without <span> or <em>
+                } else if (inputText === "nick") {
+                    bestMatch = "Nick = I don't know? Not as cool as everyone else";
+                } else if (inputText === "gall") {
+                    bestMatch = "Gall = Cool and has that 6 pack";
+                } else if (inputText === "elijah") {
+                    bestMatch = "Elijah = Li'on's alter ego";
+                } else if (inputText === "urijah") {
+                    bestMatch = "Urijah = Google type haircut";
+                } else if (inputText === "udi") {
+                    bestMatch = "Udi = Gru lookin ahh";
+                }
+                // Handle "command", "list", "commands", or "lists" to show list of commands
+                else if (inputText === "command" || inputText === "list" || inputText === "commands" || inputText === "lists") {
+                    showCommandList();
+                    typingInProgress = false; // Allow user to see the list
+                    return; // Don't process any further
+                }
+                // Check for greetings like "hi", "hello", "helo"
+                else if (greetingPattern.test(inputText)) {
+                    bestMatch = "Hi there, nice to see you!";
+                }
+                // Check for alternative greetings like "helo", "hii", etc.
+                else if (similarPattern.test(inputText)) {
+                    bestMatch = "Did you mean 'hi'? Nice to meet you!";
+                }
+                // Responses for questions about the name
+                else if (inputText.includes("what's your name") || inputText.includes("who are you") || inputText.includes("your name")) {
+                    bestMatch = "I'm Timmy! How can I help you today?";
+                }
+                // Special response for "cool" (add glasses)
+                else if (inputText.includes("cool") || inputText.includes("your cool")) {
+                    bestMatch = "You think I'm cool? Thanks! 😎";
+                    addGlasses(); // Make the glasses fall and land on the eyes
+                }
+                // If "shut up" is typed, make the face turn red and remove glasses
+                else if (inputText === "shut up") {
+                    bestMatch = "Excuse me?!";
+                    makeFaceRed(); // Make the face red
+                    removeGlasses(); // Remove glasses
+                }
+                // If any other input is typed, reset the face to normal
+                else {
+                    bestMatch = "Sorry, no match found!";
+                }
+
+                // Animate mouth opening and closing while typing response
+                const mouth = document.querySelector(".mouth");
+
+                // Start mouth animation
+                animateMouthWhileTyping();
+
+                // Start typing the response
+                typeResponse(bestMatch);
+
+                // Clear the input field after response
+                document.getElementById("userInput").value = "";
+            }
+        }
+
+        // Function to make the character's face turn red
+        function makeFaceRed() {
+            const character = document.querySelector(".character");
+            character.classList.add("red-face");
+        }
+
+        // Function to reset the character's face color back to normal
+        function resetFaceColor() {
+            const character = document.querySelector(".character");
+            character.classList.remove("red-face");
+        }
+
+        // Hide the name list
+        function hideNameList() {
+            const nameList = document.querySelector(".name-list");
+            nameList.style.display = "none"; // Hide the list
+        }
+
+        // Hide the command list
+        function hideCommandList() {
+            const commandList = document.querySelector(".command-list");
+            commandList.style.display = "none"; // Hide the list
+        }
+
+        // Make the glasses fall and land on the character's eyes
+        function addGlasses() {
+            if (!glassesOn) {
+                const glasses = document.querySelector(".glasses");
+                glasses.style.opacity = 1; // Make glasses visible
+                glasses.style.top = "60px"; // Initially place above the character's head
+                setTimeout(() => {
+                    glasses.style.transition = "top 0.5s ease-out"; // Smooth transition to eyes
+                    glasses.style.top = "30px"; // Drop the glasses to land on the eyes
+                    glassesOn = true; // Mark glasses as on
+                }, 100); // Delay before starting the fall
+            }
+        }
+
+        // Remove glasses with upward movement and fade out
+        function removeGlasses() {
+            const glasses = document.querySelector(".glasses");
+
+            // Reset transition for smooth upward movement and fade
+            glasses.style.transition = "top 0.5s ease-in-out, opacity 0.5s ease-in-out";
+            glasses.style.top = "-20px"; // Move glasses above the character's head
+            glasses.style.opacity = 0; // Hide the glasses
+
+            // Mark glasses as off after the transition
+            setTimeout(() => {
+                glassesOn = false; // Ensure glasses are removed properly
+            }, 500); // Match the duration of the transition
+        }
+
+        // Show the list of commands when "command", "list", "commands", or "lists" is typed
+        function showCommandList() {
+            const resultElement = document.getElementById("response");
+            resultElement.innerHTML = ""; // Clear the previous response
+
+            const commandList = document.querySelector(".command-list");
+            commandList.style.display = "block"; // Show the list
+            commandList.innerHTML = `
+                <strong>Here are the things you can say:</strong><br>
+                - Hi, Hello, Hey, How are you<br>
+                - Owen, Louie, Rueben, Timmy<br>
+                - Li'on, Nick, Gall, Elijah, Urijah, Udi<br>
+                - Command, List, Commands, Lists<br>
+                - What's your name?, Who are you?<br>
+                - Cool<br>
+            `;
+        }
+
+        // Mouth animation while typing
+        function animateMouthWhileTyping() {
+            const mouth = document.querySelector(".mouth");
+
+            function toggleMouth() {
+                mouth.classList.toggle("open-mouth");
+            }
+
+            // Open and close the mouth every 300ms while typing
+            window.mouthInterval = setInterval(toggleMouth, 300);
+        }
+
+        // Stop the mouth animation after typing is done
+        function stopMouthAnimation() {
+            clearInterval(window.mouthInterval);
+            const mouth = document.querySelector(".mouth");
+            mouth.classList.remove("open-mouth");
+        }
+
+        // Type out the response slowly
+        function typeResponse(response) {
+            const resultElement = document.getElementById("response");
+            let i = 0;
+            resultElement.innerHTML = "";
+            const typingSpeed = 100; // Adjust typing speed here
+
+            function type() {
+                if (i < response.length) {
+                    resultElement.innerHTML += response.charAt(i);
+                    i++;
+                    setTimeout(type, typingSpeed);
+                } else {
+                    // After typing is done, stop mouth animation
+                    stopMouthAnimation();
+
+                    // Fade in the response text
+                    resultElement.classList.add("fade-in");
+                    typingInProgress = false; // Allow further typing
+                }
+            }
+
+            type(); // Start typing the response
+        }
+    </script>
+</body>
+</html>
